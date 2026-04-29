@@ -70,11 +70,56 @@ router.get('/connectors/:id/edit', async (req, res) => {
 });
 
 router.get('/jobs', async (req, res) => {
-  const items = await Job.find({ user: req.user._id })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
-  res.render('jobs', { page: 'jobs', jobs: items });
+  const pageNum = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const sizeRaw = parseInt(req.query.size, 10) || 20;
+  const size = Math.min(100, Math.max(5, sizeRaw));
+
+  const q = (req.query.q || '').trim();
+  const allowedStatuses = ['queued', 'running', 'succeeded', 'failed'];
+  const status = allowedStatuses.includes(req.query.status) ? req.query.status : '';
+  const from = req.query.from || '';
+  const to = req.query.to || '';
+
+  const filter = { user: req.user._id };
+  if (status) filter.status = status;
+  if (q) {
+    // case-insensitive substring on URL; escape regex special chars
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.url = { $regex: safe, $options: 'i' };
+  }
+  if (from || to) {
+    filter.createdAt = {};
+    if (from) {
+      const d = new Date(from);
+      if (!isNaN(d)) filter.createdAt.$gte = d;
+    }
+    if (to) {
+      // Inclusive of the entire "to" day
+      const d = new Date(to);
+      if (!isNaN(d)) {
+        d.setHours(23, 59, 59, 999);
+        filter.createdAt.$lte = d;
+      }
+    }
+    if (Object.keys(filter.createdAt).length === 0) delete filter.createdAt;
+  }
+
+  const [items, total] = await Promise.all([
+    Job.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((pageNum - 1) * size)
+      .limit(size)
+      .lean(),
+    Job.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  res.render('jobs', {
+    page: 'jobs',
+    jobs: items,
+    pagination: { page: pageNum, size, total, totalPages },
+    filters: { q, status, from, to },
+  });
 });
 
 router.get('/jobs/:id', async (req, res) => {

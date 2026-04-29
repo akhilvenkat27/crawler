@@ -120,4 +120,10 @@ router.get('/jobs/:id', async (req, res) => {
   res.json({ job });
 });
 
+router.delete('/jobs/:id', async (req, res) => {
+  const r = await Job.deleteOne({ _id: req.params.id, user: req.user._id });
+  if (r.deletedCount === 0) return res.status(404).json({ error: 'Not found.' });
+  res.json({ ok: true });
+});
+
 module.exports = router;

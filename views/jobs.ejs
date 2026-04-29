@@ -3,8 +3,63 @@
 <section class="space-y-5">
   <div>
     <h2 class="text-[22px] font-semibold tracking-tight text-ink-900">Crawl jobs</h2>
-    <p class="text-sm text-ink-500 mt-1">Last 50 runs, newest first.</p>
+    <p class="text-sm text-ink-500 mt-1">All jobs you've ever submitted, newest first.</p>
   </div>
+
+  <%
+    const hasFilters = filters.q || filters.status || filters.from || filters.to;
+    function qs(extra) {
+      const p = new URLSearchParams();
+      if (filters.q) p.set('q', filters.q);
+      if (filters.status) p.set('status', filters.status);
+      if (filters.from) p.set('from', filters.from);
+      if (filters.to) p.set('to', filters.to);
+      p.set('size', pagination.size);
+      Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v));
+      return '?' + p.toString();
+    }
+  %>
+
+  <form method="get" action="/jobs" class="rounded-xl border border-ink-200 bg-white shadow-card p-4">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+      <div class="md:col-span-5">
+        <label class="block text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-1.5">URL contains</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          </span>
+          <input type="text" name="q" value="<%= filters.q %>" placeholder="example.com/article" class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-ink-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
+        </div>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-1.5">Status</label>
+        <select name="status" class="w-full pl-3 pr-8 py-2 text-sm rounded-lg border border-ink-200 bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none">
+          <option value="">All</option>
+          <% ['succeeded','failed','running','queued'].forEach(function(s){ %>
+            <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-1.5">From</label>
+        <input type="date" name="from" value="<%= filters.from %>" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-1.5">To</label>
+        <input type="date" name="to" value="<%= filters.to %>" class="w-full px-3 py-2 text-sm rounded-lg border border-ink-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none" />
+      </div>
+      <div class="md:col-span-1 flex items-end gap-2">
+        <button type="submit" class="w-full inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-lg bg-ink-900 text-white hover:bg-ink-800">Apply</button>
+      </div>
+    </div>
+    <% if (hasFilters) { %>
+      <div class="mt-3 flex items-center gap-3 text-xs text-ink-500">
+        <a href="/jobs" class="text-ink-700 hover:text-ink-900 underline-offset-2 hover:underline">Clear filters</a>
+        <span class="text-ink-300">·</span>
+        <span><%= pagination.total %> match<%= pagination.total === 1 ? '' : 'es' %></span>
+      </div>
+    <% } %>
+  </form>
 
   <% if (jobs.length === 0) { %>
     <div class="rounded-xl border border-dashed border-ink-200 bg-white p-10 text-center text-sm text-ink-500">No jobs yet.</div>
@@ -18,25 +73,85 @@
             <th class="text-left font-medium px-5 py-3">Status</th>
             <th class="text-left font-medium px-5 py-3">Duration</th>
             <th class="text-left font-medium px-5 py-3">Created</th>
-            <th></th>
+            <th class="text-right font-medium px-5 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
           <% jobs.forEach(function(j){
                const dur = j.startedAt && j.finishedAt ? ((new Date(j.finishedAt) - new Date(j.startedAt))/1000).toFixed(1)+'s' : '—'; %>
-            <tr class="border-b border-ink-100/80 last:border-0 hover:bg-ink-50/40">
+            <tr class="border-b border-ink-100/80 last:border-0 hover:bg-ink-50/40" data-job-row="<%= j._id %>">
               <td class="px-5 py-3 font-mono text-[12.5px] text-ink-700 truncate max-w-[420px]"><%= j.url %></td>
               <td class="px-5 py-3 text-ink-600"><%= j.provider %></td>
               <td class="px-5 py-3"><%- include('partials/status_pill', { status: j.status }) %></td>
               <td class="px-5 py-3 text-ink-500 text-xs"><%= dur %></td>
               <td class="px-5 py-3 text-ink-500 text-xs"><%= new Date(j.createdAt).toLocaleString() %></td>
-              <td class="px-5 py-3 text-right"><a href="/jobs/<%= j._id %>" class="text-xs text-brand-700 hover:underline">Open</a></td>
+              <td class="px-5 py-3 text-right space-x-2 whitespace-nowrap">
+                <a href="/jobs/<%= j._id %>" class="text-xs px-2 py-1 rounded border border-ink-200 hover:bg-ink-50 inline-block">Open</a>
+                <button data-delete-job="<%= j._id %>" class="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">Delete</button>
+              </td>
             </tr>
           <% }); %>
         </tbody>
       </table>
     </div>
+
+    <%
+       const p = pagination.page, tp = pagination.totalPages;
+       const start = pagination.total === 0 ? 0 : (p - 1) * pagination.size + 1;
+       const end = Math.min(p * pagination.size, pagination.total);
+       function url(n) { return '/jobs' + qs({ page: n }); }
+       // Compact page list with ellipses: 1 … p-1 p p+1 … tp
+       const pages = new Set([1, tp, p - 1, p, p + 1].filter(n => n >= 1 && n <= tp));
+       const sorted = Array.from(pages).sort((a, b) => a - b);
+    %>
+    <div class="flex items-center justify-between text-xs text-ink-500 flex-wrap gap-3 px-1">
+      <div><%= start %> – <%= end %> of <%= pagination.total %> records</div>
+
+      <nav class="flex items-center gap-1">
+        <% if (p > 1) { %>
+          <a href="<%= url(p - 1) %>" class="w-8 h-8 inline-flex items-center justify-center rounded border border-ink-200 hover:bg-ink-50 text-ink-700" aria-label="Previous">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          </a>
+        <% } else { %>
+          <span class="w-8 h-8 inline-flex items-center justify-center rounded border border-ink-100 text-ink-300">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          </span>
+        <% } %>
+        <% let prev = 0; sorted.forEach(function(n){ %>
+          <% if (prev && n - prev > 1) { %><span class="px-1 text-ink-300">…</span><% } %>
+          <% if (n === p) { %>
+            <span class="w-8 h-8 inline-flex items-center justify-center rounded bg-ink-900 text-white text-xs font-medium"><%= n %></span>
+          <% } else { %>
+            <a href="<%= url(n) %>" class="w-8 h-8 inline-flex items-center justify-center rounded border border-ink-200 hover:bg-ink-50 text-ink-700"><%= n %></a>
+          <% } %>
+          <% prev = n; %>
+        <% }); %>
+        <% if (p < tp) { %>
+          <a href="<%= url(p + 1) %>" class="w-8 h-8 inline-flex items-center justify-center rounded border border-ink-200 hover:bg-ink-50 text-ink-700" aria-label="Next">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </a>
+        <% } else { %>
+          <span class="w-8 h-8 inline-flex items-center justify-center rounded border border-ink-100 text-ink-300">
+            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </span>
+        <% } %>
+      </nav>
+
+      <form method="get" action="/jobs" class="flex items-center gap-2">
+        <% if (filters.q) { %><input type="hidden" name="q" value="<%= filters.q %>" /><% } %>
+        <% if (filters.status) { %><input type="hidden" name="status" value="<%= filters.status %>" /><% } %>
+        <% if (filters.from) { %><input type="hidden" name="from" value="<%= filters.from %>" /><% } %>
+        <% if (filters.to) { %><input type="hidden" name="to" value="<%= filters.to %>" /><% } %>
+        <select name="size" onchange="this.form.submit()" class="pl-2 pr-8 py-1 rounded border border-ink-200 bg-white text-ink-700">
+          <% [10, 20, 50, 100].forEach(function(s){ %>
+            <option value="<%= s %>" <%= pagination.size === s ? 'selected' : '' %>><%= s %></option>
+          <% }); %>
+        </select>
+        <span>per page</span>
+      </form>
+    </div>
   <% } %>
 </section>
 
+<script src="/js/jobs.js"></script>
 <%- include('partials/footer') %>

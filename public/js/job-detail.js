@@ -39,6 +39,16 @@
     if (!md.textContent) return;
     window.downloadText(`job-${jobId}.md`, md.textContent);
   });
+  document.getElementById('delete-btn')?.addEventListener('click', async () => {
+    if (!confirm('Delete this job? This cannot be undone.')) return;
+    try {
+      await window.api.req(`/api/jobs/${jobId}`, { method: 'DELETE' });
+      window.toast('Job deleted', 'success');
+      setTimeout(() => (location.href = '/jobs'), 400);
+    } catch (e) {
+      window.toast(e.message, 'error');
+    }
+  });
 
   if (status === 'queued' || status === 'running') {
     const timer = setInterval(async () => {

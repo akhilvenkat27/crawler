@@ -1,9 +1,12 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Connector = require('../models/Connector');
 const Job = require('../models/Job');
 const providers = require('../providers');
 
 const router = express.Router();
+
+const isValidId = (id) => mongoose.isValidObjectId(id);
 
 router.get('/', async (req, res) => {
   const userId = req.user._id;
@@ -49,9 +52,15 @@ router.get('/connectors/new', async (req, res) => {
 });
 
 router.get('/connectors/:id/edit', async (req, res) => {
+  if (!isValidId(req.params.id)) return res.redirect('/connectors');
   const c = await Connector.findOne({ _id: req.params.id, user: req.user._id }).lean();
   if (!c) return res.redirect('/connectors');
   const provider = providers.get(c.provider);
+  if (!provider) {
+    // Provider was removed from the registry — fall back to the picker so the
+    // user can delete the orphan from the connectors list.
+    return res.redirect('/connectors');
+  }
   res.render('connector_form', {
     page: 'connectors',
     catalog: providers.list(),
@@ -69,6 +78,7 @@ router.get('/jobs', async (req, res) => {
 });
 
 router.get('/jobs/:id', async (req, res) => {
+  if (!isValidId(req.params.id)) return res.redirect('/jobs');
   const job = await Job.findOne({ _id: req.params.id, user: req.user._id }).lean();
   if (!job) return res.redirect('/jobs');
   res.render('job_detail', { page: 'jobs', job });

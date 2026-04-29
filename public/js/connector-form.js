@@ -11,7 +11,10 @@
     const credentials = {};
     form.querySelectorAll('[data-credential]').forEach((el) => {
       const v = el.value.trim();
-      if (v) credentials[el.dataset.credential] = v;
+      // Empty password field on edit means "keep current"; empty text field
+      // means "clear". For new connectors, always send what's typed.
+      if (el.type === 'password' && id && !v) return;
+      credentials[el.dataset.credential] = v;
     });
     const config = {};
     form.querySelectorAll('[data-config]').forEach((el) => {

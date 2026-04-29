@@ -1,10 +1,18 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Connector = require('../models/Connector');
 const Job = require('../models/Job');
 const providers = require('../providers');
 const jobRunner = require('../services/jobRunner');
 
 const router = express.Router();
+
+// Reject malformed :id params before they hit Mongoose so we return JSON 400s
+// instead of bubbling up a CastError to the global error handler.
+router.param('id', (req, res, next, id) => {
+  if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id.' });
+  next();
+});
 
 router.get('/providers', (req, res) => {
   res.json({ providers: providers.list() });

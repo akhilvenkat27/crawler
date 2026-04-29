@@ -32,11 +32,13 @@ async function execute(jobId) {
   await job.save();
 
   try {
+    // Per-run options from the dashboard form override per-connector defaults.
+    const mergedOptions = { ...(connector.config || {}), ...(job.options || {}) };
     const result = await provider.run({
       url: job.url,
       credentials: connector.credentials,
       config: connector.config,
-      options: job.options,
+      options: mergedOptions,
     });
     job.result = {
       markdown: result.markdown || '',

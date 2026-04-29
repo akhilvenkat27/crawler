@@ -100,6 +100,7 @@
       clearInterval(pollTimer);
       window.toast(e.message, 'error');
       submitBtn.disabled = false;
+      submitBtn.textContent = 'Run crawl';
     }
   }
 
@@ -116,6 +117,9 @@
     md.classList.add('hidden');
     md.textContent = '';
     md.classList.remove('text-red-600');
+    rendered.innerHTML = '';
+    rendered.classList.add('hidden');
+    currentMarkdown = '';
     empty.classList.remove('hidden');
     empty.textContent = 'Submitting…';
     setStatus('queued');

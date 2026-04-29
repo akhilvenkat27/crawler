@@ -4,11 +4,8 @@
       const id = btn.dataset.toggle;
       try {
         const { enabled } = await window.api.req(`/api/connectors/${id}/toggle`, { method: 'POST' });
-        const label = btn.querySelector('[data-toggle-label]');
-        label.textContent = enabled ? 'enabled' : 'disabled';
-        btn.className = `inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full ${enabled ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-600'}`;
-        btn.querySelector('span.w-1\\.5').className = `w-1.5 h-1.5 rounded-full ${enabled ? 'bg-brand-500' : 'bg-ink-400'}`;
         window.toast(`Connector ${enabled ? 'enabled' : 'disabled'}`, 'success');
+        setTimeout(() => location.reload(), 400);
       } catch (e) {
         window.toast(e.message, 'error');
       }

@@ -10,16 +10,21 @@
         <span id="job-url" class="text-sm text-ink-700 font-mono truncate"><%= job.url %></span>
       </div>
       <div class="flex items-center gap-2">
+        <div class="inline-flex rounded-md border border-ink-200 p-0.5 bg-white" role="tablist">
+          <button data-view="rendered" class="view-tab text-xs px-2.5 py-1 rounded bg-ink-900 text-white">Rendered</button>
+          <button data-view="raw" class="view-tab text-xs px-2.5 py-1 rounded text-ink-600">Raw</button>
+        </div>
         <button id="copy-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Copy markdown</button>
         <button id="download-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Download .md</button>
       </div>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px]">
-      <div class="p-6 min-h-[300px]">
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div class="p-6 min-h-[300px] min-w-0">
         <% if (job.status === 'failed') { %>
-          <div class="text-sm text-red-600 font-mono whitespace-pre-wrap"><%= job.error %></div>
+          <div class="text-sm text-red-600 font-mono whitespace-pre-wrap break-words"><%= job.error %></div>
         <% } %>
-        <pre id="job-markdown" class="text-[13px] leading-relaxed font-mono whitespace-pre-wrap text-ink-800 max-h-[640px] overflow-auto"><%= job.result && job.result.markdown ? job.result.markdown : '' %></pre>
+        <div id="job-rendered" class="prose prose-sm max-w-none prose-headings:tracking-tight prose-a:text-brand-700 prose-a:break-words prose-pre:bg-ink-50 prose-pre:text-ink-800 prose-img:rounded-lg max-h-[640px] overflow-auto"></div>
+        <pre id="job-markdown" class="hidden text-[13px] leading-relaxed font-mono whitespace-pre-wrap break-words text-ink-800 max-h-[640px] overflow-auto"><%= job.result && job.result.markdown ? job.result.markdown : '' %></pre>
       </div>
       <aside class="border-t lg:border-t-0 lg:border-l border-ink-200/70 p-5 bg-ink-50/40 text-xs">
         <div class="text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-2">Images</div>

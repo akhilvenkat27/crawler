@@ -39,6 +39,17 @@ window.copyText = async function (text) {
   }
 };
 
+window.renderMarkdown = function (md) {
+  if (!md) return '';
+  if (typeof marked === 'undefined') return md;
+  marked.setOptions({ gfm: true, breaks: false });
+  const html = marked.parse(md);
+  if (typeof DOMPurify !== 'undefined') {
+    return DOMPurify.sanitize(html, { ADD_ATTR: ['target', 'rel'] });
+  }
+  return html;
+};
+
 window.downloadText = function (filename, text) {
   const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);

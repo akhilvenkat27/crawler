@@ -9,6 +9,8 @@
   const statusText = document.getElementById('job-status-text');
   const empty = document.getElementById('job-empty');
   const md = document.getElementById('job-markdown');
+  const rendered = document.getElementById('job-rendered');
+  let viewMode = 'rendered';
   const imgs = document.getElementById('job-images');
   const meta = document.getElementById('job-meta');
   const copyBtn = document.getElementById('copy-btn');
@@ -31,20 +33,40 @@
     statusText.textContent = status;
   }
 
+  function applyView() {
+    const hasContent = !!md.textContent;
+    if (!hasContent) {
+      md.classList.add('hidden');
+      rendered.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    if (viewMode === 'raw') {
+      md.classList.remove('hidden');
+      rendered.classList.add('hidden');
+    } else {
+      rendered.innerHTML = window.renderMarkdown(md.textContent);
+      rendered.querySelectorAll('a[href]').forEach((a) => {
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+      });
+      rendered.classList.remove('hidden');
+      md.classList.add('hidden');
+    }
+  }
+
   function renderJob(job) {
     setStatus(job.status);
     if (job.result?.markdown) {
       currentMarkdown = job.result.markdown;
       md.textContent = job.result.markdown;
-      md.classList.remove('hidden');
-      empty.classList.add('hidden');
+      md.classList.remove('text-red-600');
     }
     if (job.status === 'failed') {
-      md.classList.remove('hidden');
-      empty.classList.add('hidden');
       md.textContent = job.error || 'Unknown error.';
       md.classList.add('text-red-600');
     }
+    applyView();
     imgs.innerHTML = '';
     (job.result?.images || []).forEach((src) => {
       const a = document.createElement('a');
@@ -113,6 +135,17 @@
       submitBtn.disabled = false;
       submitBtn.textContent = 'Run crawl';
     }
+  });
+
+  document.querySelectorAll('.view-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      viewMode = btn.dataset.view;
+      document.querySelectorAll('.view-tab').forEach((b) => {
+        const active = b.dataset.view === viewMode;
+        b.className = `view-tab text-xs px-2.5 py-1 rounded ${active ? 'bg-ink-900 text-white' : 'text-ink-600'}`;
+      });
+      applyView();
+    });
   });
 
   copyBtn?.addEventListener('click', () => currentMarkdown && window.copyText(currentMarkdown));

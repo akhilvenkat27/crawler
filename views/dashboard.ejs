@@ -1,0 +1,137 @@
+<%- include('partials/header', { page: page, title: 'Dashboard — Crawler' }) %>
+
+<section class="space-y-6">
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+    <div>
+      <h2 class="text-[22px] font-semibold tracking-tight text-ink-900">Run a crawl</h2>
+      <p class="text-sm text-ink-500 mt-1">Submit a URL to a configured provider. Results stream back as the job runs.</p>
+    </div>
+    <div class="flex items-center gap-3 text-xs text-ink-500">
+      <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span> <%= enabledConnectors.length %> connector<%= enabledConnectors.length === 1 ? '' : 's' %> enabled</span>
+    </div>
+  </div>
+
+  <% if (enabledConnectors.length === 0) { %>
+    <div class="rounded-xl border border-dashed border-ink-200 bg-white shadow-card p-10 text-center">
+      <div class="mx-auto w-12 h-12 rounded-xl bg-ink-100 flex items-center justify-center mb-3">
+        <svg viewBox="0 0 24 24" class="w-5 h-5 text-ink-500" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h4"/><path d="M15 17h4a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-4"/><path d="M9 12h6"/></svg>
+      </div>
+      <div class="font-semibold text-ink-900">No connectors yet</div>
+      <p class="text-sm text-ink-500 mt-1 max-w-md mx-auto">Add a provider to start crawling. Cloudflare Browser Rendering is supported out of the box.</p>
+      <a href="/connectors/new" class="inline-flex items-center gap-1.5 mt-4 px-3.5 py-2 text-sm rounded-lg bg-ink-900 text-white hover:bg-ink-800">Add a connector</a>
+    </div>
+  <% } else { %>
+    <form id="crawl-form" action="javascript:void(0)" class="rounded-2xl border border-ink-200 bg-white shadow-card overflow-hidden">
+      <div class="p-6 space-y-5">
+        <div>
+          <label class="block text-xs font-medium text-ink-500 mb-1.5 uppercase tracking-wider">URL</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400">
+              <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1"/><path d="M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1"/></svg>
+            </span>
+            <input id="url" name="url" type="url" required placeholder="https://example.com/article" class="w-full pl-10 pr-3 py-2.5 text-[15px] rounded-lg border border-ink-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-medium text-ink-500 mb-1.5 uppercase tracking-wider">Provider</label>
+            <select id="connectorId" name="connectorId" class="w-full px-3 py-2.5 text-sm rounded-lg border border-ink-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none bg-white">
+              <% enabledConnectors.forEach(function(c){ %>
+                <option value="<%= c._id %>" data-provider="<%= c.provider %>"><%= c.label || c.provider %> — <%= c.provider %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-ink-500 mb-1.5 uppercase tracking-wider">Options</label>
+            <div class="flex items-center gap-4 px-3 py-2.5 rounded-lg border border-ink-200 bg-ink-50/40">
+              <label class="inline-flex items-center gap-2 text-sm text-ink-700">
+                <input type="checkbox" id="includeImages" checked class="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
+                Extract images
+              </label>
+              <label class="inline-flex items-center gap-2 text-sm text-ink-700">
+                <span>Wait</span>
+                <input type="number" id="waitForTimeout" min="0" max="30000" step="500" value="0" class="w-20 px-2 py-1 text-sm rounded border border-ink-200" />
+                <span class="text-ink-400 text-xs">ms</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-ink-50/60 border-t border-ink-200/70 flex items-center justify-between">
+        <div class="text-xs text-ink-500">Jobs run in-process. Polling refreshes every second until completion.</div>
+        <button type="submit" id="submit-btn" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-soft disabled:opacity-50">
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+          Run crawl
+        </button>
+      </div>
+    </form>
+
+    <div id="job-panel" class="hidden rounded-2xl border border-ink-200 bg-white shadow-card overflow-hidden">
+      <div class="px-6 py-4 border-b border-ink-200/70 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span id="job-status-pill" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-ink-100 text-ink-700">
+            <span id="job-status-dot" class="w-1.5 h-1.5 rounded-full bg-ink-400"></span>
+            <span id="job-status-text">queued</span>
+          </span>
+          <span id="job-url" class="text-sm text-ink-600 font-mono truncate max-w-[480px]"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="copy-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Copy markdown</button>
+          <button id="download-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Download .md</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px]">
+        <div class="p-6 min-h-[280px]">
+          <div id="job-empty" class="text-sm text-ink-400">Waiting for output…</div>
+          <pre id="job-markdown" class="hidden text-[13px] leading-relaxed font-mono whitespace-pre-wrap text-ink-800 max-h-[560px] overflow-auto"></pre>
+        </div>
+        <aside class="border-t lg:border-t-0 lg:border-l border-ink-200/70 p-5 bg-ink-50/40">
+          <div class="text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-2">Images</div>
+          <div id="job-images" class="space-y-2 text-xs"></div>
+          <div id="job-meta" class="mt-5 text-[11px] text-ink-500"></div>
+        </aside>
+      </div>
+    </div>
+  <% } %>
+
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold text-ink-900 tracking-tight">Recent crawls</h3>
+      <a href="/jobs" class="text-xs text-ink-500 hover:text-ink-800">View all →</a>
+    </div>
+    <% if (recentJobs.length === 0) { %>
+      <div class="text-sm text-ink-400 px-4 py-8 text-center rounded-xl border border-dashed border-ink-200 bg-white">No crawls yet.</div>
+    <% } else { %>
+      <div class="rounded-xl border border-ink-200 bg-white shadow-card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="text-[11px] uppercase tracking-wider text-ink-400">
+            <tr class="border-b border-ink-200/70">
+              <th class="text-left font-medium px-5 py-3">URL</th>
+              <th class="text-left font-medium px-5 py-3">Provider</th>
+              <th class="text-left font-medium px-5 py-3">Status</th>
+              <th class="text-left font-medium px-5 py-3">Started</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% recentJobs.forEach(function(j){ %>
+              <tr class="border-b border-ink-100/80 last:border-0 hover:bg-ink-50/40">
+                <td class="px-5 py-3 font-mono text-[12.5px] text-ink-700 truncate max-w-[420px]"><%= j.url %></td>
+                <td class="px-5 py-3 text-ink-600"><%= j.provider %></td>
+                <td class="px-5 py-3">
+                  <%- include('partials/status_pill', { status: j.status }) %>
+                </td>
+                <td class="px-5 py-3 text-ink-500 text-xs"><%= new Date(j.createdAt).toLocaleString() %></td>
+                <td class="px-5 py-3 text-right"><a href="/jobs/<%= j._id %>" class="text-xs text-brand-700 hover:underline">Open</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<script src="/js/dashboard.js"></script>
+<%- include('partials/footer') %>

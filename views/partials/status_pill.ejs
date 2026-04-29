@@ -1,0 +1,12 @@
+<%
+  const map = {
+    queued:    { cls: 'bg-ink-100 text-ink-700',           dot: 'bg-ink-400'    },
+    running:   { cls: 'bg-amber-50 text-amber-700',        dot: 'bg-amber-500 animate-pulse' },
+    succeeded: { cls: 'bg-brand-50 text-brand-700',        dot: 'bg-brand-500'  },
+    failed:    { cls: 'bg-red-50 text-red-700',            dot: 'bg-red-500'    },
+  };
+  const s = map[status] || map.queued;
+%>
+<span class="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-full <%= s.cls %>">
+  <span class="w-1.5 h-1.5 rounded-full <%= s.dot %>"></span><%= status %>
+</span>

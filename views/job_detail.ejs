@@ -1,0 +1,46 @@
+<%- include('partials/header', { page: page, title: 'Job — Crawler' }) %>
+
+<section class="space-y-5" data-job-id="<%= job._id %>" data-job-status="<%= job.status %>">
+  <a href="/jobs" class="text-xs text-ink-500 hover:text-ink-800">← Back to jobs</a>
+
+  <div class="rounded-2xl border border-ink-200 bg-white shadow-card overflow-hidden">
+    <div class="px-6 py-4 border-b border-ink-200/70 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3 min-w-0">
+        <span id="job-status-pill"><%- include('partials/status_pill', { status: job.status }) %></span>
+        <span id="job-url" class="text-sm text-ink-700 font-mono truncate"><%= job.url %></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="copy-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Copy markdown</button>
+        <button id="download-btn" class="text-xs px-2.5 py-1.5 rounded-md border border-ink-200 hover:bg-ink-50">Download .md</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px]">
+      <div class="p-6 min-h-[300px]">
+        <% if (job.status === 'failed') { %>
+          <div class="text-sm text-red-600 font-mono whitespace-pre-wrap"><%= job.error %></div>
+        <% } %>
+        <pre id="job-markdown" class="text-[13px] leading-relaxed font-mono whitespace-pre-wrap text-ink-800 max-h-[640px] overflow-auto"><%= job.result && job.result.markdown ? job.result.markdown : '' %></pre>
+      </div>
+      <aside class="border-t lg:border-t-0 lg:border-l border-ink-200/70 p-5 bg-ink-50/40 text-xs">
+        <div class="text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-2">Images</div>
+        <div id="job-images" class="space-y-2">
+          <% (job.result && job.result.images || []).forEach(function(src){ %>
+            <a href="<%= src %>" target="_blank" rel="noopener" class="block truncate text-brand-700 hover:underline"><%= src %></a>
+          <% }); %>
+          <% if (!job.result || !job.result.images || !job.result.images.length) { %>
+            <div class="text-ink-400">No images extracted.</div>
+          <% } %>
+        </div>
+        <div class="mt-5 text-[11px] text-ink-500 space-y-1">
+          <div><span class="text-ink-400">Provider:</span> <%= job.provider %></div>
+          <div><span class="text-ink-400">Created:</span> <%= new Date(job.createdAt).toLocaleString() %></div>
+          <% if (job.startedAt) { %><div><span class="text-ink-400">Started:</span> <%= new Date(job.startedAt).toLocaleString() %></div><% } %>
+          <% if (job.finishedAt) { %><div><span class="text-ink-400">Finished:</span> <%= new Date(job.finishedAt).toLocaleString() %></div><% } %>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script src="/js/job-detail.js"></script>
+<%- include('partials/footer') %>
